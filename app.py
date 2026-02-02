@@ -194,18 +194,20 @@ elif menu == "Akar Persamaan":
         value="x**2 - 4",
         help="Tips: Gunakan `**` untuk pangkat. Contoh: x**2 - 4"
     )
+    
+    # Parse Fungsi
     f = parse_expression(func_input)
     
-    # Tambahan cek agar aplikasi tidak mati jika f adalah None
+    # CEK KEGAGALAN: Jika f gagal diproses, berhenti di sini.
     if f is None:
-        st.warning("Mohon perbaiki rumus fungsi sebelum melanjutkan.")
-        st.stop() # Ini penting untuk mencegah error plot di bawah
+        st.error("❌ **Gagal Memproses Fungsi.** Periksa penulisan Anda.")
+        st.caption("Pastikan menggunakan `**` (bintang dua) untuk pangkat, bukan `^`.")
+        st.stop()  # INI PENTING: Mencegah error lanjutan 'NoneType'
         
-    if f is None: 
-        st.error("Fungsi tidak valid. Gunakan format Python (contoh: x**3 - x - 1). Gunakan `**` untuk pangkat.")
-    else:
+    # Jika sampai sini berarti fungsi valid, kita baru hitung plot dasar
+    try:
         x = np.linspace(-10, 10, 400)
-        y = f(x) # Error akan muncul di sini jika input salah, tapi sudah ditangkap di atas
+        y = f(x)
         
         # Plot Fungsi Awal
         fig = go.Figure()
@@ -213,70 +215,73 @@ elif menu == "Akar Persamaan":
         fig.add_hline(y=0, line_dash="dash", line_color="gray")
         fig.update_layout(title="Visualisasi Fungsi", xaxis_title='x', yaxis_title='f(x)')
         st.plotly_chart(fig, use_container_width=True)
+    except Exception as plot_err:
+        st.error(f"❌ Error saat memplot fungsi: {plot_err}")
+        st.stop()
 
-        if method == "Bisection (Dikotomi)":
-            st.markdown("""
-            <div class="feynman-box">
-            <b>Analogi: Permainan Panas Dingin.</b><br>
-            Kita punya dua titik A dan B. Di A nilainya positif, di B negatif. 
-            Artinya di tengah-tengah mereka, pasti ada titik yang nilainya NOL (jika garisnya kontinyu).
-            Kita potong tengahnya, lihat positif atau negatifnya, lalu buang bagian yang tidak relevan.
-            Ulangi sampai potongannya sangat kecil.
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2 = st.columns(2)
-            a = col1.number_input("Batas Bawah (a):", value=-3.0)
-            b = col2.number_input("Batas Atas (b):", value=0.0)
-            tol = col1.number_input("Toleransi:", value=0.001)
-            max_iter = col2.number_input("Max Iterasi:", value=10, min_value=1)
-            
-            if st.button("Hitung Akar (Bisection)"):
-                results, msg = bisection_method(f, a, b, tol, max_iter)
-                if results is None:
-                    st.error(msg)
-                else:
-                    st.success(f"Status: {msg}")
-                    st.write("Tabel Iterasi:")
-                    st.dataframe(results, columns=["Iter", "a", "b", "c (Akar)", "f(c)"])
-                    
-                    # Animasi Sederhana pada Plot
-                    last_c = results[-1][2]
-                    fig.add_trace(go.Scatter(x=[last_c], y=[0], mode='markers', marker=dict(size=15, color='red'), name='Akar Ditemukan'))
-                    st.plotly_chart(fig, use_container_width=True)
+    # LOGIKA BISECTION
+    if method == "Bisection (Dikotomi)":
+        st.markdown("""
+        <div class="feynman-box">
+        <b>Analogi: Permainan Panas Dingin.</b><br>
+        Kita punya dua titik A dan B. Di A nilainya positif, di B negatif. 
+        Artinya di tengah-tengah mereka, pasti ada titik yang nilainya NOL.
+        Kita potong tengahnya, lalu buang bagian yang tidak relevan.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        a = col1.number_input("Batas Bawah (a):", value=-3.0)
+        b = col2.number_input("Batas Atas (b):", value=0.0)
+        tol = col1.number_input("Toleransi:", value=0.001)
+        max_iter = col2.number_input("Max Iterasi:", value=10, min_value=1)
+        
+        if st.button("Hitung Akar (Bisection)"):
+            results, msg = bisection_method(f, a, b, tol, max_iter)
+            if results is None:
+                st.error(f"Gagal: {msg}")
+            else:
+                st.success(f"Status: {msg}")
+                st.write("Tabel Iterasi:")
+                st.dataframe(results, columns=["Iter", "a", "b", "c (Akar)", "f(c)"])
+                
+                # Animasi Sederhana pada Plot
+                last_c = results[-1][2]
+                fig.add_trace(go.Scatter(x=[last_c], y=[0], mode='markers', marker=dict(size=15, color='red'), name='Akar Ditemukan'))
+                st.plotly_chart(fig, use_container_width=True)
 
-        elif method == "Newton-Raphson":
-            st.markdown("""
-            <div class="feynman-box">
-            <b>Analogi: Meluncur di Bukit.</b><br>
-            Kita mulai dari titik tebakan. Kita tarik garis singgung (turunan). 
-            Garis singgung itu akan memotong sumbu X di titik baru. Titik baru ini 
-            pasti lebih dekat ke akar yang asli daripada titik awal.
-            Metode ini <b>sangat cepat</b> tapi butuh turunan.
-            </div>
-            """, unsafe_allow_html=True)
+    # LOGIKA NEWTON-RAPHSON
+    elif method == "Newton-Raphson":
+        st.markdown("""
+        <div class="feynman-box">
+        <b>Analogi: Meluncur di Bukit.</b><br>
+        Kita mulai dari titik tebakan. Kita tarik garis singgung (turunan). 
+        Garis singgung itu akan memotong sumbu X di titik baru. Titik baru ini 
+        pasti lebih dekat ke akar yang asli daripada titik awal.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        x0 = col1.number_input("Tebakan Awal (x0):", value=3.0)
+        tol = col2.number_input("Toleransi:", value=0.001)
+        
+        if st.button("Hitung Akar (Newton-Raphson)"):
+            # Numerical derivative untuk efisiensi user
+            h = 1e-5
+            df = lambda x: (f(x+h) - f(x-h)) / (2*h)
             
-            col1, col2 = st.columns(2)
-            x0 = col1.number_input("Tebakan Awal (x0):", value=3.0)
-            tol = col2.number_input("Toleransi:", value=0.001)
+            results, msg = newton_raphson_method(f, df, x0, tol, max_iter=10)
             
-            if st.button("Hitung Akar (Newton-Raphson)"):
-                # Numerical derivative untuk efisiensi user
-                h = 1e-5
-                df = lambda x: (f(x+h) - f(x-h)) / (2*h)
+            if results is None:
+                st.error(f"Gagal: {msg}")
+            else:
+                st.success(f"Status: {msg}")
+                st.write("Tabel Iterasi:")
+                st.dataframe(results, columns=["Iter", "x_old", "f(x)", "x_new", "Delta"])
                 
-                results, msg = newton_raphson_method(f, df, x0, tol, max_iter=10)
-                
-                if results is None:
-                    st.error(msg)
-                else:
-                    st.success(f"Status: {msg}")
-                    st.write("Tabel Iterasi:")
-                    st.dataframe(results, columns=["Iter", "x_old", "f(x)", "x_new", "Delta"])
-                    
-                    last_x = results[-1][2]
-                    fig.add_trace(go.Scatter(x=[last_x], y=[0], mode='markers', marker=dict(size=15, color='green'), name='Akar Ditemukan'))
-                    st.plotly_chart(fig, use_container_width=True)
+                last_x = results[-1][2]
+                fig.add_trace(go.Scatter(x=[last_x], y=[0], mode='markers', marker=dict(size=15, color='green'), name='Akar Ditemukan'))
+                st.plotly_chart(fig, use_container_width=True)
 
 # --- HALAMAN 4: SISTEM LINEAR ---
 elif menu == "Sistem Linear":
@@ -444,6 +449,7 @@ st.sidebar.markdown("---")
 st.sidebar.write("Dibuat untuk:")
 st.sidebar.write("S1 Teknik Elektro - ELT60214")
 st.sidebar.write("© 2025 Metode Numerik")
+
 
 
 
