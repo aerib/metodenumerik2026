@@ -45,13 +45,29 @@ st.markdown("""
 def parse_expression(expr_str):
     """Mengubah string input user menjadi fungsi python yang bisa dieksekusi"""
     try:
+        # Deteksi umum kesalahan pemula
+        if '^' in expr_str:
+            # Kita tidak otomatis ganti agar user belajar, tapi kita deteksi
+            pass 
+            
         allowed_names = {
             "sin": np.sin, "cos": np.cos, "tan": np.tan, "exp": np.exp, "log": np.log,
             "sqrt": np.sqrt, "pi": np.pi, "e": np.e, "abs": np.abs
         }
         f = lambda x: eval(expr_str, {"__builtins__": None}, allowed_names)
+        
+        # Jalankan tes singkat untuk memastikan tidak crash saat plot
+        _ = f(np.array([0.0, 1.0]))
         return f
+        
+    except SyntaxError:
+        st.error("❌ **Syntax Error:** Cek kembali penulisan fungsi Anda.")
+        return None
+    except TypeError as e:
+        st.error(f"❌ **TypeError:** {e}. Gunakan `**` untuk pangkat (x**2), bukan `^`.")
+        return None
     except Exception as e:
+        st.error(f"❌ **Error:** {e}")
         return None
 
 def bisection_method(f, a, b, tol, max_iter):
@@ -173,14 +189,23 @@ elif menu == "Akar Persamaan":
     method = st.radio("Pilih Metode:", ["Bisection (Dikotomi)", "Newton-Raphson"])
     
     # Input Fungsi
-    func_input = st.text_input("Masukkan fungsi f(x):", value="x**2 - 4")
+    func_input = st.text_input(
+        "Masukkan fungsi f(x):", 
+        value="x**2 - 4",
+        help="Tips: Gunakan `**` untuk pangkat. Contoh: x**2 - 4"
+    )
     f = parse_expression(func_input)
     
+    # Tambahan cek agar aplikasi tidak mati jika f adalah None
     if f is None:
-        st.error("Fungsi tidak valid. Gunakan format Python (contoh: x**3 - x - 1)")
+        st.warning("Mohon perbaiki rumus fungsi sebelum melanjutkan.")
+        st.stop() # Ini penting untuk mencegah error plot di bawah
+        
+    if f is None: 
+        st.error("Fungsi tidak valid. Gunakan format Python (contoh: x**3 - x - 1). Gunakan `**` untuk pangkat.")
     else:
         x = np.linspace(-10, 10, 400)
-        y = f(x)
+        y = f(x) # Error akan muncul di sini jika input salah, tapi sudah ditangkap di atas
         
         # Plot Fungsi Awal
         fig = go.Figure()
@@ -419,5 +444,6 @@ st.sidebar.markdown("---")
 st.sidebar.write("Dibuat untuk:")
 st.sidebar.write("S1 Teknik Elektro - ELT60214")
 st.sidebar.write("© 2025 Metode Numerik")
+
 
 
