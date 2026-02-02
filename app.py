@@ -118,7 +118,7 @@ if menu == "Beranda":
     ### 💡 Konsep Feynman: Mengapa Kita Butuh Ini?
     
     Bayangkan Anda ingin menghitung luas area kolam renang yang berbentuk sangat aneh, 
-    bukan lingkaran atau kotak biasa. Rumus $Luas = p x l$ tidak bisa digunakan.
+    bukan lingkaran atau kotak biasa. Rumus Luas = panjang x lebar tidak bisa digunakan.
     
     Di sinilah **Metode Numerik** berperan. Alih-alih mencari satu jawaban "tepat" 
     (yang mungkin tidak ada), kita mencari jawaban "cukup dekat" yang bisa diterima 
@@ -419,4 +419,5 @@ st.sidebar.markdown("---")
 st.sidebar.write("Dibuat untuk:")
 st.sidebar.write("S1 Teknik Elektro - ELT60214")
 st.sidebar.write("© 2025 Metode Numerik")
+
 
