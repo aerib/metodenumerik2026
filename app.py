@@ -51,6 +51,7 @@ def parse_expression(expr_str):
             st.error("❌ Gunakan `**` untuk pangkat, bukan `^`. Contoh: x**2 bukan x^2")
             return None
         
+        # Replace 'x' dengan array placeholder untuk evaluasi
         allowed_names = {
             "sin": np.sin,
             "cos": np.cos,
@@ -61,15 +62,22 @@ def parse_expression(expr_str):
             "pi": np.pi,
             "e": np.e,
             "abs": np.abs,
-            "x": 0  # placeholder untuk validasi
         }
         
-        # Buat fungsi lambda
-        code = compile(expr_str, "<string>", "eval")
-        f = lambda x: eval(expr_str, {"__builtins__": None, "x": x}, allowed_names)
+        # Buat fungsi lambda yang benar
+        def f(x):
+            # Buat namespace baru untuk setiap evaluasi
+            namespace = allowed_names.copy()
+            namespace['x'] = x
+            return eval(expr_str, {"__builtins__": None}, namespace)
         
-        # Test dengan array
-        test_result = f(np.array([0.0, 1.0]))
+        # Test dengan array untuk memastikan fungsi bekerja
+        test_array = np.array([0.0, 1.0, 2.0])
+        test_result = f(test_array)
+        
+        # Pastikan hasilnya adalah array
+        if not isinstance(test_result, np.ndarray):
+            test_result = np.array(test_result)
         
         return f
         
@@ -80,7 +88,7 @@ def parse_expression(expr_str):
         st.error(f"❌ **Name Error:** Variabel atau fungsi tidak dikenal. Gunakan 'x' sebagai variabel. Detail: {e}")
         return None
     except TypeError as e:
-        st.error(f"❌ **Type Error:** {e}")
+        st.error(f"❌ **Type Error:** {e}. Gunakan `**` untuk pangkat (x**2), bukan `^`.")
         return None
     except Exception as e:
         st.error(f"❌ **Error:** {e}")
@@ -91,8 +99,8 @@ def bisection_method(f, a, b, tol, max_iter):
     results = []
     
     try:
-        fa = f(a)
-        fb = f(b)
+        fa = float(f(a))
+        fb = float(f(b))
     except Exception as e:
         return None, f"Error mengevaluasi fungsi: {e}"
     
@@ -101,7 +109,7 @@ def bisection_method(f, a, b, tol, max_iter):
     
     for i in range(max_iter):
         c = (a + b) / 2
-        fc = f(c)
+        fc = float(f(c))
         results.append((i+1, a, b, c, fc))
         
         if abs(fc) < tol or (b - a)/2 < tol:
@@ -123,8 +131,8 @@ def newton_raphson_method(f, df, x0, tol, max_iter):
     
     for i in range(max_iter):
         try:
-            fx = f(x)
-            dfx = df(x)
+            fx = float(f(x))
+            dfx = float(df(x))
         except Exception as e:
             return None, f"Error mengevaluasi fungsi: {e}"
         
@@ -147,8 +155,8 @@ def secant_method(f, x0, x1, tol, max_iter):
     
     for i in range(max_iter):
         try:
-            f0 = f(x0)
-            f1 = f(x1)
+            f0 = float(f(x0))
+            f1 = float(f(x1))
         except Exception as e:
             return None, f"Error mengevaluasi fungsi: {e}"
         
@@ -156,7 +164,8 @@ def secant_method(f, x0, x1, tol, max_iter):
             return None, "⚠️ Pembagian dengan nol"
         
         x2 = x1 - f1 * (x1 - x0) / (f1 - f0)
-        results.append((i+1, x0, x1, x2, f(x2)))
+        f2 = float(f(x2))
+        results.append((i+1, x0, x1, x2, f2))
         
         if abs(x2 - x1) < tol:
             return results, "✅ Konvergen"
@@ -351,6 +360,10 @@ elif menu == "🎯 Akar Persamaan":
         x = np.linspace(x_range[0], x_range[1], 500)
         y = f(x)
         
+        # Pastikan y adalah array
+        if not isinstance(y, np.ndarray):
+            y = np.array(y)
+        
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=x, y=y, mode='lines', name='f(x)', line=dict(color='blue', width=2)))
         fig.add_hline(y=0, line_dash="dash", line_color="red", annotation_text="y=0")
@@ -365,6 +378,7 @@ elif menu == "🎯 Akar Persamaan":
         
     except Exception as e:
         st.error(f"❌ Error saat plotting: {e}")
+        st.info("Pastikan fungsi yang dimasukkan valid dan dapat dievaluasi untuk range x yang dipilih.")
         st.stop()
     
     # Metode Bisection
@@ -495,7 +509,8 @@ elif menu == "🎯 Akar Persamaan":
             with st.spinner("Menghitung..."):
                 # Numerical derivative
                 h = 1e-7
-                df = lambda x_val: (f(x_val + h) - f(x_val - h)) / (2 * h)
+                def df(x_val):
+                    return (f(x_val + h) - f(x_val - h)) / (2 * h)
                 
                 results, msg = newton_raphson_method(f, df, x0, tol, max_iter)
             
@@ -516,7 +531,7 @@ elif menu == "🎯 Akar Persamaan":
                 
                 # Hasil akhir
                 final_root = results[-1][3]
-                final_error = abs(f(final_root))
+                final_error = abs(float(f(final_root)))
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -534,9 +549,9 @@ elif menu == "🎯 Akar Persamaan":
                 # Tambahkan garis singgung iterasi terakhir
                 if len(results) > 0:
                     x_last = results[-1][2]
-                    f_last = f(x_last)
+                    f_last = float(f(x_last))
                     h = 1e-7
-                    df_last = (f(x_last + h) - f(x_last - h)) / (2 * h)
+                    df_last = (float(f(x_last + h)) - float(f(x_last - h))) / (2 * h)
                     
                     # Buat garis singgung
                     x_tangent = np.linspace(x_last - 2, x_last + 2, 50)
@@ -618,7 +633,7 @@ elif menu == "🎯 Akar Persamaan":
                 
                 # Hasil akhir
                 final_root = results[-1][3]
-                final_error = abs(f(final_root))
+                final_error = abs(float(f(final_root)))
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -1174,6 +1189,10 @@ elif menu == "⚙️ Integral & PDB":
                 x_points = np.linspace(a_int, b_int, n_int + 1)
                 y_points = f_int(x_points)
                 
+                # Pastikan y_points adalah array
+                if not isinstance(y_points, np.ndarray):
+                    y_points = np.array(y_points)
+                
                 # Trapezoidal rule
                 dx = (b_int - a_int) / n_int
                 integral_result = 0.5 * dx * (y_points[0] + 2 * np.sum(y_points[1:-1]) + y_points[-1])
@@ -1184,6 +1203,10 @@ elif menu == "⚙️ Integral & PDB":
                 # Function curve
                 x_smooth = np.linspace(a_int, b_int, 300)
                 y_smooth = f_int(x_smooth)
+                
+                # Pastikan y_smooth adalah array
+                if not isinstance(y_smooth, np.ndarray):
+                    y_smooth = np.array(y_smooth)
                 
                 fig.add_trace(go.Scatter(
                     x=x_smooth, y=y_smooth,
@@ -1196,7 +1219,7 @@ elif menu == "⚙️ Integral & PDB":
                 for i in range(n_int):
                     fig.add_trace(go.Scatter(
                         x=[x_points[i], x_points[i], x_points[i+1], x_points[i+1], x_points[i]],
-                        y=[0, y_points[i], y_points[i+1], 0, 0],
+                        y=[0, float(y_points[i]), float(y_points[i+1]), 0, 0],
                         fill='toself',
                         fillcolor='rgba(0, 100, 200, 0.2)',
                         line=dict(color='rgba(0, 100, 200, 0.5)', width=1),
@@ -1240,7 +1263,15 @@ elif menu == "⚙️ Integral & PDB":
                 # Perbandingan dengan metode lain (jika memungkinkan)
                 try:
                     from scipy import integrate
-                    result_scipy, error = integrate.quad(f_int, a_int, b_int)
+                    
+                    # Wrapper untuk scipy.integrate.quad yang hanya menerima scalar
+                    def f_scalar(x_val):
+                        result = f_int(x_val)
+                        if isinstance(result, np.ndarray):
+                            return float(result[0] if len(result) > 0 else result)
+                        return float(result)
+                    
+                    result_scipy, error = integrate.quad(f_scalar, a_int, b_int)
                     
                     st.markdown("---")
                     st.subheader("🔬 Verifikasi dengan SciPy")
@@ -1264,8 +1295,8 @@ elif menu == "⚙️ Integral & PDB":
                     else:
                         st.warning("⚠️ Pertimbangkan menambah jumlah segmen untuk akurasi lebih baik")
                 
-                except:
-                    pass
+                except Exception as e:
+                    st.warning(f"Tidak dapat melakukan verifikasi dengan SciPy: {e}")
             
             except Exception as e:
                 st.error(f"❌ Error: {e}")
