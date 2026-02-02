@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
+# Import matplotlib dihapus karena menggunakan Plotly agar lebih interaktif di web
 import plotly.graph_objects as go
 from scipy import optimize
 import sympy as sp
@@ -13,12 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CSS CUSTOM (TAMPILAN PROFESIONAL) ---
-def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
-# CSS inline untuk mempercantik tampilan tanpa file eksternal
+# --- CSS CUSTOM ---
 st.markdown("""
 <style>
     .main-title {
@@ -35,22 +30,12 @@ st.markdown("""
         border-radius: 10px;
         margin-bottom: 1.5rem;
     }
-    .concept-title {
-        color: #2c3e50;
-        font-weight: 600;
-    }
     .stButton>button {
         color: white;
         background-color: #1f77b4;
         border-radius: 5px;
         height: 3em;
         width: 100%;
-    }
-    .success-box {
-        background-color: #d4edda;
-        color: #155724;
-        padding: 10px;
-        border-radius: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -60,12 +45,10 @@ st.markdown("""
 def parse_expression(expr_str):
     """Mengubah string input user menjadi fungsi python yang bisa dieksekusi"""
     try:
-        # Menggunakan eval dengan namespace matematika yang aman
         allowed_names = {
             "sin": np.sin, "cos": np.cos, "tan": np.tan, "exp": np.exp, "log": np.log,
             "sqrt": np.sqrt, "pi": np.pi, "e": np.e, "abs": np.abs
         }
-        # Gunakan lambda untuk mengubah string 'x**2 - 4' jadi fungsi f(x)
         f = lambda x: eval(expr_str, {"__builtins__": None}, allowed_names)
         return f
     except Exception as e:
@@ -253,7 +236,7 @@ elif menu == "Akar Persamaan":
             tol = col2.number_input("Toleransi:", value=0.001)
             
             if st.button("Hitung Akar (Newton-Raphson)"):
-                # Numerical derivative untuk efisiensi user (tidak perlu input turunan manual)
+                # Numerical derivative untuk efisiensi user
                 h = 1e-5
                 df = lambda x: (f(x+h) - f(x-h)) / (2*h)
                 
@@ -312,7 +295,6 @@ elif menu == "Sistem Linear":
             \begin{{bmatrix}} {b1} \\ {b2} \\ {b3} \end{{bmatrix}}
             """)
             
-            # Visualisasi Geometri Hanya untuk 2 variabel jika user ubah input (opsional, tapi kita fokus 3 var)
             st.write("NumPy menggunakan metode LAPACK (sebagaimana Gauss) yang sangat optimal.")
         except np.linalg.LinAlgError:
             st.error("Singular Matrix! Tidak ada solusi unik (determinan 0).")
@@ -381,7 +363,7 @@ elif menu == "Integral & PDB":
         dx = (b - a) / n
         integral = 0.5 * dx * (y[0] + 2*sum(y[1:-1]) + y[-1])
         
-        # Plotting visual trapezoids
+        # Plotting visual trapezoids using Plotly
         fig = go.Figure()
         x_continuous = np.linspace(a, b, 200)
         fig.add_trace(go.Scatter(x=x_continuous, y=f(x_continuous), mode='lines', name='f(x)'))
